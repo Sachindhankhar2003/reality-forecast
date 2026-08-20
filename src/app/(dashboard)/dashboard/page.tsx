@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
+import { forecastStore } from '@/lib/forecast-store';
 import { getAuthenticatedUser } from '@/lib/auth-utils';
 import { QuickPredictInput } from '@/components/dashboard/QuickPredictInput';
 import { DirectPredictionCard } from '@/components/dashboard/DirectPredictionCard';
@@ -10,23 +10,14 @@ import { ShortestPathCard } from '@/components/dashboard/ShortestPathCard';
 import {
   ArrowRight,
   Shield,
-  Sparkles,
+  Zap,
 } from 'lucide-react';
 
 export default async function DashboardPage() {
   const user = await getAuthenticatedUser();
   const userName = user?.name || 'Sachin';
-
-  // Fetch real forecasts from DB for this user
-  let latestForecast = null;
-  if (user?.id) {
-    latestForecast = await prisma.forecast.findFirst({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-    }).catch(() => null);
-  }
-
-  const hasRealForecast = !!latestForecast;
+  const forecasts = forecastStore.getAllForecasts();
+  const activeForecast = forecasts[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
@@ -46,7 +37,7 @@ export default async function DashboardPage() {
               Good morning, {userName}.
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
-              Type what you need to do and your location. Reality AI will predict departure time, best transit mode, and shortest safe paths.
+              Type or speak what you need to do. Reality AI will predict departure time, best transit mode, and shortest safe paths.
             </p>
           </div>
         </div>
@@ -55,45 +46,47 @@ export default async function DashboardPage() {
         <QuickPredictInput />
       </div>
 
-      {/* 2. Show DirectPredictionCard only if user has real forecasts */}
-      {hasRealForecast ? (
-        <DirectPredictionCard forecastId={latestForecast!.id} />
-      ) : (
-        /* Empty state CTA — shown before first prediction */
-        <div className="card" style={{ padding: '2rem', textAlign: 'center', border: '2px dashed var(--border-color)', background: 'var(--bg-elevated)' }}>
-          <Sparkles size={36} color="var(--accent-light)" style={{ margin: '0 auto 1rem' }} />
-          <h2 className="font-display" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-            No predictions yet
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-            Type your event + location above and click <strong>Predict Plan</strong> to get your first AI-powered forecast with live weather, traffic and route analysis.
-          </p>
-          <Link href="/forecasts/new" className="btn btn-primary" style={{ display: 'inline-flex' }}>
-            <Sparkles size={16} />
-            <span>Create First Prediction</span>
-            <ArrowRight size={16} />
-          </Link>
+      {/* 2. DIRECT PREDICTED ACTION CARD (Google Calendar + WhatsApp Share + Push Notification Alert) */}
+      <DirectPredictionCard forecastId={activeForecast?.id} />
+
+      {/* 3. LIVE WEATHER & ATMOSPHERIC TELEMETRY BOX */}
+      <LiveConditionsCard />
+
+      {/* 4. TRANSPORT MODE COMPARISON CARD */}
+      <TransportComparisonCard />
+
+      {/* 5. SHORTEST & SAFEST ROUTE PATH CARD */}
+      <ShortestPathCard />
+
+      {/* 6. TRAFFIC TIMELINE GRAPH */}
+      <TrafficChart />
+
+      {/* 7. TOP ACTION CHECKLIST */}
+      <div className="card card-emerald" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <h3 className="font-display" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Zap size={18} color="#10B981" />
+          <span>Top Recommended Actions</span>
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ padding: '0.85rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-elevated)', display: 'flex', gap: '0.75rem', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
+            <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px', accentColor: '#10B981' }} />
+            <div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>1. Take Delhi Metro Yellow Line at 08:20 AM</div>
+              <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>Fastest, 100% on-time mode with zero highway traffic delay</div>
+            </div>
+          </div>
+
+          <div style={{ padding: '0.85rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-elevated)', display: 'flex', gap: '0.75rem', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
+            <input type="checkbox" style={{ width: '18px', height: '18px', accentColor: '#10B981' }} />
+            <div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>2. Review System Design & React STAR Scenarios</div>
+              <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>Prepares technical responses for 10:00 AM interview</div>
+            </div>
+          </div>
         </div>
-      )}
-
-      {/* 3–6: Live cards — only show when user has made a prediction */}
-      {hasRealForecast && (
-        <>
-          {/* LIVE WEATHER & ATMOSPHERIC TELEMETRY BOX */}
-          <LiveConditionsCard />
-
-          {/* TRANSPORT MODE COMPARISON CARD */}
-          <TransportComparisonCard />
-
-          {/* SHORTEST & SAFEST ROUTE PATH CARD */}
-          <ShortestPathCard />
-
-          {/* TRAFFIC TIMELINE GRAPH */}
-          <TrafficChart />
-        </>
-      )}
+      </div>
 
     </div>
   );
 }
-
