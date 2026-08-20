@@ -1,0 +1,25 @@
+{
+  "hosting": {
+    "site": "project-375ad9a6-7266-4185-bae",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "nextjsServer"
+      }
+    ]
+  },
+  "apphosting": {
+    "env": [
+      {
+        "variable": "NODE_ENV",
+        "value": "production"
+      }
+    ]
+  }
+}
