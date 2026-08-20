@@ -5,36 +5,66 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    @GET("api/v1/forecasts")
+    // ── Auth ──────────────────────────────────────────────────────────────
+    @POST("api/mobile-auth")
+    suspend fun mobileLogin(@Body request: MobileLoginRequest): Response<MobileLoginResponse>
+
+    // ── Forecasts ─────────────────────────────────────────────────────────
+    @GET("api/forecasts")
     suspend fun getForecasts(): Response<ApiResponseEnvelope<List<ForecastDto>>>
 
-    @GET("api/v1/forecasts/{id}")
+    @GET("api/forecasts/{id}")
     suspend fun getForecastDetail(@Path("id") id: String): Response<ApiResponseEnvelope<ForecastDto>>
 
-    @POST("api/v1/forecasts")
+    @POST("api/forecasts")
     suspend fun createForecast(@Body request: CreateForecastRequest): Response<ApiResponseEnvelope<ForecastDto>>
 
-    @GET("api/v1/profile")
+    // ── Profile ───────────────────────────────────────────────────────────
+    @GET("api/profile")
     suspend fun getProfile(): Response<ApiResponseEnvelope<UserProfileDto>>
 
-    @PUT("api/v1/profile")
+    @PUT("api/profile")
     suspend fun updateProfile(@Body profile: UpdateProfileRequest): Response<ApiResponseEnvelope<UserProfileDto>>
 
-    @GET("api/v1/memory")
+    // ── Memory ────────────────────────────────────────────────────────────
+    @GET("api/memory")
     suspend fun getMemories(): Response<ApiResponseEnvelope<List<MemoryDto>>>
 
-    @POST("api/v1/memory")
+    @POST("api/memory")
     suspend fun createMemory(@Body request: CreateMemoryRequest): Response<ApiResponseEnvelope<MemoryDto>>
 
-    @POST("api/v1/assistant")
+    // ── Assistant ─────────────────────────────────────────────────────────
+    @POST("api/assistant")
     suspend fun sendAssistantMessage(@Body request: AssistantRequest): Response<ApiResponseEnvelope<AssistantResponseDto>>
 
-    @POST("api/v1/what-if")
-    suspend fun simulateWhatIf(@Body request: WhatIfRequest): Response<ApiResponseEnvelope<WhatIfResponseDto>>
+    // ── Conversations ─────────────────────────────────────────────────────
+    @GET("api/conversations")
+    suspend fun getConversations(): Response<ApiResponseEnvelope<List<ConversationDto>>>
+
+    @POST("api/conversations")
+    suspend fun createConversation(@Body request: CreateConversationRequest): Response<ApiResponseEnvelope<ConversationDto>>
 }
 
+// ── Request bodies ─────────────────────────────────────────────────────────
+data class MobileLoginRequest(val email: String, val password: String)
 data class CreateForecastRequest(val prompt: String)
 data class UpdateProfileRequest(val name: String?, val bio: String?, val location: String?)
 data class CreateMemoryRequest(val category: String, val key: String, val value: String)
 data class AssistantRequest(val prompt: String, val forecastId: String? = null)
-data class WhatIfRequest(val forecastId: String, val userInput: String)
+data class CreateConversationRequest(val title: String?)
+
+// ── Response bodies ────────────────────────────────────────────────────────
+data class MobileLoginResponse(
+    val success: Boolean,
+    val token: String?,
+    val user: UserProfileDto?,
+    val error: String?
+)
+
+data class ConversationDto(
+    val id: String,
+    val title: String,
+    val domain: String?,
+    val createdAt: String,
+    val updatedAt: String
+)

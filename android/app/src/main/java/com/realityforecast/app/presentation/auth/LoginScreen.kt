@@ -16,8 +16,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.realityforecast.app.core.network.ApiClient
+import com.realityforecast.app.core.network.MobileLoginRequest
 import com.realityforecast.app.core.session.SessionManager
 import com.realityforecast.app.presentation.components.RealityLogoIcon
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,14 +28,13 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
+    val scope = rememberCoroutineScope()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var serverUrl by remember { mutableStateOf(sessionManager.getServerUrl() ?: ApiClient.getBaseUrl()) }
     var showPassword by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-    var showServerConfig by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     Scaffold(containerColor = Color(0xFF120626)) { padding ->
@@ -57,7 +58,6 @@ fun LoginScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Reality Forecast High Quality Vector Logo Symbol
                     RealityLogoIcon(size = 56.dp)
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -132,7 +132,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Password Field with Eye Icon Toggle
+                    // Password Field
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
@@ -164,7 +164,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Sign In Button
+                    // Sign In Button — calls real API
                     Button(
                         onClick = {
                             val trimmedEmail = email.trim()
@@ -172,19 +172,40 @@ fun LoginScreen(
                                 errorMessage = "Please enter a valid email address."
                                 return@Button
                             }
-                            if (password.isBlank()) {
-                                errorMessage = "Password is required."
+                            if (password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
                                 return@Button
                             }
 
                             isLoading = true
-                            ApiClient.setBaseUrl(serverUrl)
-                            sessionManager.saveServerUrl(serverUrl)
+                            errorMessage = ""
 
-                            val userName = if (trimmedEmail.contains("@")) trimmedEmail.substringBefore("@").capitalize() else "Sachin"
-                            sessionManager.saveSession(trimmedEmail, userName)
-                            isLoading = false
-                            onLoginSuccess()
+                            scope.launch {
+                                try {
+                                    val api = ApiClient.createService()
+                                    val response = api.mobileLogin(MobileLoginRequest(trimmedEmail, password))
+
+                                    if (response.isSuccessful && response.body()?.success == true) {
+                                        val body = response.body()!!
+                                        val token = body.token ?: ""
+                                        val name = body.user?.name ?: trimmedEmail.substringBefore("@")
+
+                                        // Save real token
+                                        sessionManager.saveSession(trimmedEmail, name, token)
+                                        // Inject token into future API calls
+                                        ApiClient.setAuthToken(token)
+
+                                        isLoading = false
+                                        onLoginSuccess()
+                                    } else {
+                                        errorMessage = response.body()?.error ?: "Invalid email or password."
+                                        isLoading = false
+                                    }
+                                } catch (e: Exception) {
+                                    errorMessage = "Cannot connect to server. Check your internet connection."
+                                    isLoading = false
+                                }
+                            }
                         },
                         enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),
@@ -200,35 +221,13 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    TextButton(onClick = { showServerConfig = !showServerConfig }) {
-                        Text(
-                            text = if (showServerConfig) "Hide Server Connection Settings" else "Server IP Configuration (WiFi)",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    if (showServerConfig) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = serverUrl,
-                            onValueChange = {
-                                serverUrl = it
-                                ApiClient.setBaseUrl(it)
-                            },
-                            label = { Text("Server Host Base URL", color = Color.Gray, fontSize = 11.sp) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF3B82F6),
-                                unfocusedBorderColor = Color(0xFF1E1B4B),
-                                focusedTextColor = Color(0xFF93C5FD),
-                                unfocusedTextColor = Color(0xFF93C5FD)
-                            )
-                        )
-                    }
+                    Text(
+                        text = "Connected to: reality-forecast.onrender.com",
+                        fontSize = 10.sp,
+                        color = Color(0xFF4C1D95)
+                    )
                 }
             }
         }

@@ -14,11 +14,9 @@ class SessionManager(context: Context) {
         private const val KEY_SERVER_URL = "server_url"
     }
 
-    fun isLoggedIn(): Boolean {
-        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
-    }
+    fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
 
-    fun saveSession(email: String, name: String, token: String = "token_rf_session") {
+    fun saveSession(email: String, name: String, token: String) {
         prefs.edit()
             .putBoolean(KEY_IS_LOGGED_IN, true)
             .putString(KEY_USER_EMAIL, email)
@@ -36,17 +34,10 @@ class SessionManager(context: Context) {
             .apply()
     }
 
-    fun getUserEmail(): String {
-        return prefs.getString(KEY_USER_EMAIL, "") ?: ""
-    }
-
-    fun getUserName(): String {
-        return prefs.getString(KEY_USER_NAME, "Sachin") ?: "Sachin"
-    }
-
-    fun getServerUrl(): String? {
-        return prefs.getString(KEY_SERVER_URL, null)
-    }
+    fun getUserEmail(): String = prefs.getString(KEY_USER_EMAIL, "") ?: ""
+    fun getUserName(): String = prefs.getString(KEY_USER_NAME, "User") ?: "User"
+    fun getToken(): String? = prefs.getString(KEY_USER_TOKEN, null)
+    fun getServerUrl(): String? = prefs.getString(KEY_SERVER_URL, null)
 
     fun saveServerUrl(url: String) {
         prefs.edit().putString(KEY_SERVER_URL, url).apply()
