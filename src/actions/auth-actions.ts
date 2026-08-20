@@ -18,7 +18,7 @@ export async function registerUser(formData: FormData) {
 
   const parsed = RegisterSchema.safeParse(raw);
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message || 'Invalid input provided' };
   }
 
   const { name, email, password } = parsed.data;
