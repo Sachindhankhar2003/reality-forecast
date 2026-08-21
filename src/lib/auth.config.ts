@@ -16,7 +16,10 @@ export const authConfig: NextAuthConfig = {
       const isAdminRoute = pathname.startsWith('/admin');
       const isPublicRoute =
         pathname.startsWith('/api/health') ||
-        pathname.startsWith('/api/auth');
+        pathname.startsWith('/api/auth') ||
+        pathname.startsWith('/api/mobile-auth') ||
+        pathname.startsWith('/api/assistant') ||
+        pathname.startsWith('/api/forecasts');
 
       if (isPublicRoute) {
         return true;
